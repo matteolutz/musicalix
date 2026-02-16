@@ -1,51 +1,62 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { Route, Routes, useLocation, useNavigate } from "react-router";
+import PerformPage from "./pages/Perform";
+import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
+import ActorsPage from "./pages/Actors";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+type Tab = {
+  title: string;
+  id: string;
+  href: string;
+};
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+const tabs: Tab[] = [
+  {
+    title: "Perform",
+    id: "perform",
+    href: "/",
+  },
+  {
+    title: "Actors",
+    id: "actors",
+    href: "/actors",
+  },
+];
+
+const App = () => {
+  const location = useLocation();
+  const currentHref = `/${location.pathname.split("/").slice(1)[0]}`;
+  const currentTab = tabs.find((tab) => tab.href === currentHref);
+
+  const navigate = useNavigate();
+
+  const handleTabValueChange = (value: string) => {
+    const newTab = tabs.find((tab) => tab.id === value);
+    if (newTab && newTab.id !== currentTab?.id) {
+      navigate(newTab.href);
+    }
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
+    <main className="size-full">
+      <Tabs
+        className="w-full"
+        value={currentTab?.id}
+        onValueChange={handleTabValueChange}
       >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
+        <TabsList className="w-full">
+          {tabs.map((tab) => (
+            <TabsTrigger value={tab.id} key={tab.id}>
+              {tab.title}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <Routes>
+        <Route path="/" element={<PerformPage />} />
+        <Route path="/actors" element={<ActorsPage />} />
+      </Routes>
     </main>
   );
-}
+};
 
 export default App;

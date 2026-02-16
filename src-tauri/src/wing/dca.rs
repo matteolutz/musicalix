@@ -1,34 +1,30 @@
 use libwing::WingConsole;
 
-use crate::wing::{error::WingError, WingColor};
+use crate::wing::{error::WingError, id::WingId, WingColor};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WingDcaId(u8);
 
-impl WingDcaId {
-    const MIN_DCA: u8 = 1;
-    const MAX_DCA: u8 = 16;
+impl WingId for WingDcaId {
+    type Id = u8;
+
+    const MIN_ID: u8 = 1;
+    const MAX_ID: u8 = 16;
+
+    fn unchecked_new(id: u8) -> Self {
+        Self(id)
+    }
+
+    fn value(&self) -> u8 {
+        self.0
+    }
 }
 
 impl TryFrom<u8> for WingDcaId {
     type Error = WingError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        if value >= Self::MIN_DCA && value <= Self::MAX_DCA {
-            Ok(WingDcaId(value))
-        } else {
-            Err(WingError::id_out_of_bounds(
-                value,
-                Self::MIN_DCA,
-                Self::MAX_DCA,
-            ))
-        }
-    }
-}
-
-impl WingDcaId {
-    pub fn to_u8(&self) -> u8 {
-        self.0
+        Self::new(value)
     }
 }
 
@@ -46,7 +42,7 @@ impl<'a> WingDca<'a> {
 // DCAs
 impl<'a> WingDca<'a> {
     fn get_dca_property(&self, property: &str) -> Option<i32> {
-        let name = format!("/dca/{}/{}", self.id.to_u8(), property);
+        let name = format!("/dca/{}/{}", self.id.display(), property);
         WingConsole::name_to_id(&name)
     }
 

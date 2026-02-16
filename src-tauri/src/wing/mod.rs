@@ -11,3 +11,5 @@ pub use console::*;
 
 mod color;
 pub use color::*;
+
+pub mod id;
