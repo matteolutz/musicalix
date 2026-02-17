@@ -39,25 +39,28 @@ export const ShowProvider: FC<PropsWithChildren> = ({ children }) => {
 
   useKeyedEnumTauriEventHandler("showEvent", {
     Loaded: (show) => {
-      console.log("got showfile load event:", show);
       setShow(show);
     },
   });
 
-  useKeyedEnumTauriEventHandler("actorEvent", {
-    Added: ([id, actor]) => {
-      if (show === null) return;
+  useKeyedEnumTauriEventHandler(
+    "actorEvent",
+    {
+      Added: ([id, actor]) => {
+        if (show === null) return;
 
-      show.mixConfig.actors[id] = actor;
-      setShow({ ...show });
-    },
-    Removed: (id) => {
-      if (show === null) return;
+        show.mixConfig.actors[id] = actor;
+        setShow({ ...show });
+      },
+      Removed: (id) => {
+        if (show === null) return;
 
-      delete show.mixConfig.actors[id];
-      setShow({ ...show });
+        delete show.mixConfig.actors[id];
+        setShow({ ...show });
+      },
     },
-  });
+    [show],
+  );
 
   if (!show) {
     return <div>Loading...</div>;

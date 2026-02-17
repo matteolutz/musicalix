@@ -1,10 +1,9 @@
-use std::ops::Deref;
-
 use crate::wing::{WingChannelId, WingColor};
 
 #[repr(transparent)]
 #[derive(
     Debug,
+    Default,
     Copy,
     Clone,
     PartialEq,
@@ -17,6 +16,12 @@ use crate::wing::{WingChannelId, WingColor};
     specta::Type,
 )]
 pub struct ActorId(u32);
+
+impl ActorId {
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
 
 impl From<u32> for ActorId {
     fn from(value: u32) -> Self {
@@ -38,6 +43,14 @@ pub struct Actor {
 }
 
 impl Actor {
+    pub fn new(channel: WingChannelId, name: String, color: Option<WingColor>) -> Self {
+        Self {
+            name,
+            channel,
+            color,
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -51,7 +64,7 @@ impl Actor {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, specta::Type, tauri_specta::Event)]
+#[derive(Clone, serde::Deserialize, serde::Serialize, specta::Type, tauri_specta::Event)]
 pub enum ActorEvent {
     Added(ActorId, Actor),
     Removed(ActorId),

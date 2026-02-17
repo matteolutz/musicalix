@@ -8,7 +8,7 @@ use tauri::{
 };
 
 use crate::{
-    mix::{get_wing_channel_info, ActorEvent},
+    mix::{add_actor, get_wing_channel_info, ActorEvent},
     show::{get_show, open_show, open_showfile, save_show, save_show_as, Show, ShowEvent},
 };
 
@@ -57,7 +57,8 @@ pub fn run() {
         .commands(tauri_specta::collect_commands![
             get_show,
             open_showfile,
-            get_wing_channel_info
+            get_wing_channel_info,
+            add_actor
         ])
         .events(tauri_specta::collect_events![ShowEvent, ActorEvent,]);
 

@@ -9,8 +9,8 @@ use crate::{cue::Cue, mix::MixConfig, AppData, MutableState};
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Show {
-    mix_config: MixConfig,
-    cues: Vec<Cue>,
+    pub mix_config: MixConfig,
+    pub cues: Vec<Cue>,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]

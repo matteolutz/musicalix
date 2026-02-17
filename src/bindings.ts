@@ -28,6 +28,14 @@ async getWingChannelInfo(channel: number) : Promise<Result<WingChannelInfo, stri
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async addActor(channel: WingChannelId, name: string, color: WingColor | null) : Promise<Result<ActorId, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("add_actor", { channel, name, color }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
