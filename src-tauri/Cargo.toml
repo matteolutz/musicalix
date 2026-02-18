@@ -29,3 +29,4 @@ specta-typescript = "0.0.9"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
 serde_with = "3.16.1"
 tauri-plugin-dialog = "2"
+tokio = "1.49.0"

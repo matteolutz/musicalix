@@ -4,19 +4,35 @@ use tauri::AppHandle;
 use tauri_specta::Event;
 
 use crate::{
-    mix::{error::MixError, Actor, ActorEvent, ActorId},
+    mix::{error::MixError, Actor, ActorEvent, ActorId, Position, PositionId},
     wing::{WingChannelId, WingColor},
     AppData, MutableState,
 };
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct MixConfig {
     actors: HashMap<ActorId, Actor>,
+    positions: HashMap<PositionId, Position>,
 }
 
 impl MixConfig {
+    pub fn actors(&self) -> impl Iterator<Item = (&ActorId, &Actor)> {
+        self.actors.iter()
+    }
+
     pub fn actor(&self, id: ActorId) -> Result<&Actor, MixError> {
         self.actors.get(&id).ok_or(MixError::ActorNotFound(id))
+    }
+
+    pub fn positions(&self) -> impl Iterator<Item = (&PositionId, &Position)> {
+        self.positions.iter()
+    }
+
+    pub fn position(&self, id: PositionId) -> Result<&Position, MixError> {
+        self.positions
+            .get(&id)
+            .ok_or(MixError::PositionNotFound(id))
     }
 
     pub fn controlled_channels<'a>(&'a self) -> impl Iterator<Item = &'a WingChannelId> {

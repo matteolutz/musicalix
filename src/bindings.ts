@@ -5,17 +5,9 @@
 
 
 export const commands = {
-async getShow() : Promise<Result<Show, string>> {
+async getShow() : Promise<Result<[Show, ShowState], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_show") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async openShowfile(filePath: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("open_showfile", { filePath }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -36,6 +28,14 @@ async addActor(channel: WingChannelId, name: string, color: WingColor | null) : 
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async addCue() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("add_cue") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -44,10 +44,12 @@ async addActor(channel: WingChannelId, name: string, color: WingColor | null) : 
 
 export const events = __makeEvents__<{
 actorEvent: ActorEvent,
-showEvent: ShowEvent
+showEvent: ShowEvent,
+showStateEvent: ShowStateEvent
 }>({
 actorEvent: "actor-event",
-showEvent: "show-event"
+showEvent: "show-event",
+showStateEvent: "show-state-event"
 })
 
 /** user-defined constants **/
@@ -59,11 +61,37 @@ showEvent: "show-event"
 export type Actor = { name: string; channel: WingChannelId; color: WingColor | null }
 export type ActorEvent = { Added: [ActorId, Actor] } | { Removed: ActorId }
 export type ActorId = number
-export type Cue = { DcaAssignment: DcaAssignment }
+/**
+ * A clamped value.
+ * 
+ * ClampedValue represents a floating-point value constrained to the range
+ * [0.0, 1.0]. All operations automatically clamp values to this valid range.
+ */
+export type ClampedValue = number
+export type Cue = { id: CueId; name: string; 
+/**
+ * Fade time in seconds (>= 0)
+ */
+fadeTime: number; 
+/**
+ * Snap percentage (0..=1.0) (i.e. when non-fade parameters are assigned -  DCAs, ...)
+ */
+snap: ClampedValue; dca: DcaAssignment; position: PositionAssignment }
+export type CueId = { major: number; minor: number }
+export type CueList = Cue[]
 export type DcaAssignment = { assignment: [(ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null)] }
-export type MixConfig = { actors: Partial<{ [key in ActorId]: Actor }> }
-export type Show = { mixConfig: MixConfig; cues: Cue[] }
-export type ShowEvent = { Loaded: Show }
+export type MixConfig = { actors: Partial<{ [key in ActorId]: Actor }>; positions: Partial<{ [key in PositionId]: Position }> }
+export type Position = { 
+/**
+ * Panning. 0.0 = left, 0.5 = center, 1.0 = right
+ */
+pan: ClampedValue }
+export type PositionAssignment = { assignment: Partial<{ [key in ActorId]: PositionId }> }
+export type PositionId = number
+export type Show = { mixConfig: MixConfig; cues: CueList }
+export type ShowEvent = { Loaded: Show } | { CueAdded: [number, Cue] }
+export type ShowState = { currentCueId: CueId | null }
+export type ShowStateEvent = { Update: ShowState }
 export type WingChannelId = number
 export type WingChannelInfo = { name: string; color: WingColor }
 export type WingColor = "GrayBlue" | "MediumBlue" | "DarkBlue" | "Turquoise" | "Green" | "OliveGreen" | "Yellow" | "Orange" | "Red" | "Coral" | "Pink" | "Mauve"

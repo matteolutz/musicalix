@@ -36,6 +36,7 @@ impl std::fmt::Display for ActorId {
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct Actor {
     name: String,
     channel: WingChannelId,

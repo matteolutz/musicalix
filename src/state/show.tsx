@@ -6,10 +6,15 @@ import {
   useEffect,
   useState,
 } from "react";
-import { commands, Show } from "../bindings";
+import { commands, Show, ShowState } from "../bindings";
 import { useKeyedEnumTauriEventHandler } from "../hooks/events";
 
-export const ShowContext = createContext<Show | null>(null);
+type ShowContext = {
+  show: Show;
+  showState: ShowState;
+};
+
+export const ShowContext = createContext<ShowContext | null>(null);
 
 export const useShow = () => {
   const show = useContext(ShowContext);
@@ -18,11 +23,22 @@ export const useShow = () => {
     throw new Error("useShow must be used within a ShowProvider");
   }
 
-  return show;
+  return show.show;
+};
+
+export const useShowState = () => {
+  const showState = useContext(ShowContext);
+
+  if (!showState) {
+    throw new Error("useShowState must be used within a ShowProvider");
+  }
+
+  return showState.showState;
 };
 
 export const ShowProvider: FC<PropsWithChildren> = ({ children }) => {
   const [show, setShow] = useState<Show | null>(null);
+  const [showState, setShowState] = useState<ShowState | null>(null);
 
   const requestShow = async () => {
     const showRes = await commands.getShow();
@@ -30,16 +46,35 @@ export const ShowProvider: FC<PropsWithChildren> = ({ children }) => {
       return;
     }
 
-    setShow(showRes.data);
+    const [show, showState] = showRes.data;
+    setShow(show);
+    setShowState(showState);
   };
 
   useEffect(() => {
     requestShow();
   }, []);
 
-  useKeyedEnumTauriEventHandler("showEvent", {
-    Loaded: (show) => {
-      setShow(show);
+  useKeyedEnumTauriEventHandler(
+    "showEvent",
+    {
+      Loaded: (show) => {
+        setShow(show);
+      },
+      CueAdded: ([idx, cue]) => {
+        if (show === null) return;
+
+        // insert cue at idx in show.cues
+        show.cues.splice(idx, 0, cue);
+        setShow({ ...show });
+      },
+    },
+    [show],
+  );
+
+  useKeyedEnumTauriEventHandler("showStateEvent", {
+    Update: (showState) => {
+      setShowState(showState);
     },
   });
 
@@ -62,9 +97,13 @@ export const ShowProvider: FC<PropsWithChildren> = ({ children }) => {
     [show],
   );
 
-  if (!show) {
+  if (!show || !showState) {
     return <div>Loading...</div>;
   }
 
-  return <ShowContext.Provider value={show}>{children}</ShowContext.Provider>;
+  return (
+    <ShowContext.Provider value={{ show, showState }}>
+      {children}
+    </ShowContext.Provider>
+  );
 };

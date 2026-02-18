@@ -9,12 +9,17 @@ use tauri::{
 
 use crate::{
     mix::{add_actor, get_wing_channel_info, ActorEvent},
-    show::{get_show, open_show, open_showfile, save_show, save_show_as, Show, ShowEvent},
+    show::{
+        add_cue, get_show, open_show, save_show, save_show_as, Show, ShowEvent, ShowState,
+        ShowStateEvent,
+    },
+    wing::Wing,
 };
 
 mod cue;
 mod mix;
 mod show;
+mod utils;
 mod wing;
 
 pub type MutableState<'a, T> = State<'a, Arc<RwLock<T>>>;
@@ -23,7 +28,9 @@ struct AppData {
     show: Show,
     current_show_file_path: Option<PathBuf>,
 
-    console: Option<WingConsole>,
+    show_state: ShowState,
+
+    console: Option<Wing>,
 }
 
 impl AppData {
@@ -42,9 +49,12 @@ impl AppData {
             }
         };
 
+        let wing = wing.map(|wing| wing.into());
+
         Ok(Self {
             show: Show::default(),
             current_show_file_path: None,
+            show_state: ShowState::default(),
             console: wing,
         })
     }
@@ -56,11 +66,15 @@ pub fn run() {
         // Then register them (separated by a comma)
         .commands(tauri_specta::collect_commands![
             get_show,
-            open_showfile,
             get_wing_channel_info,
-            add_actor
+            add_actor,
+            add_cue
         ])
-        .events(tauri_specta::collect_events![ShowEvent, ActorEvent,]);
+        .events(tauri_specta::collect_events![
+            ShowEvent,
+            ShowStateEvent,
+            ActorEvent,
+        ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
     builder
@@ -70,51 +84,6 @@ pub fn run() {
         )
         .expect("Failed to export typescript bindings");
 
-    /*
-    tauri::async_runtime::spawn_blocking(|| {
-        let Ok(mut wing) = WingConsole::connect(None) else {
-            return;
-        };
-        println!("Connected to Wing Console");
-
-        let mut channel_one = wing.channel(1.try_into().unwrap());
-
-        let tags = channel_one.get_tags().unwrap();
-        println!("channel 1 tags: {}", tags);
-
-        let mut dca_one = wing.dca(1.try_into().unwrap());
-        dca_one.set_name("Actor 1").unwrap();
-        dca_one.set_color(wing::WingColor::Red).unwrap();
-
-        loop {
-            if let Ok(WingResponse::NodeData(id, data)) = wing.read() {
-                match WingConsole::id_to_defs(id) {
-                    None => println!("<Unknown:{}> = {}", id, data.get_string()),
-                    Some(defs) if defs.is_empty() => {
-                        println!("<Unknown:{}> = {}", id, data.get_string())
-                    }
-                    Some(defs) if defs.len() == 1 => {
-                        println!("{} = {}", defs[0].0, data.get_string());
-                    }
-                    Some(defs) if (defs.len() > 1) => {
-                        let u = std::collections::HashSet::<u16>::from_iter(
-                            defs.iter().map(|(_, def)| def.index),
-                        );
-                        if u.len() == 1 {
-                            // let propname = String::from("/") + &defs[0].0.split("/").enumerate().filter(|(i, _)| *i < defs.len()-1).map(|(_, n)| n).collect::<Vec<_>>().join("/") +
-                            let propname =
-                                String::from("prop") + defs[0].1.index.to_string().as_str();
-                            println!("{} = {} (check out propmap.jsonl for more info on property with id {})", propname, data.get_string(), id);
-                        } else {
-                            println!("<MultiProp:{}> = {} (check out propmap.jsonl for more info on property id {})", id, data.get_string(), id);
-                        }
-                    }
-                    Some(_) => {}
-                }
-            }
-        }
-    });*/
-
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -123,6 +92,11 @@ pub fn run() {
             builder.mount_events(app);
 
             let app_data = AppData::new(cfg!(debug_assertions)).unwrap();
+
+            if let Some(wing) = app_data.console.as_ref().cloned() {
+                tauri::async_runtime::spawn_blocking(move || wing.handle_incoming_loop());
+            }
+
             app.manage(Arc::new(RwLock::new(app_data)));
 
             let file_menu = SubmenuBuilder::new(app, "File")

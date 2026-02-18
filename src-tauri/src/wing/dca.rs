@@ -1,6 +1,6 @@
 use libwing::WingConsole;
 
-use crate::wing::{error::WingError, id::WingId, WingColor};
+use crate::wing::{error::WingError, id::WingId, Wing, WingColor};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WingDcaId(u8);
@@ -29,12 +29,12 @@ impl TryFrom<u8> for WingDcaId {
 }
 
 pub struct WingDca<'a> {
-    wing: &'a mut WingConsole,
+    wing: &'a Wing,
     id: WingDcaId,
 }
 
 impl<'a> WingDca<'a> {
-    pub fn new(wing: &'a mut WingConsole, id: WingDcaId) -> Self {
+    pub fn new(wing: &'a Wing, id: WingDcaId) -> Self {
         Self { wing, id }
     }
 }
@@ -46,13 +46,13 @@ impl<'a> WingDca<'a> {
         WingConsole::name_to_id(&name)
     }
 
-    pub fn set_name(&mut self, new_name: &str) -> Result<(), WingError> {
+    pub fn set_name(&self, new_name: &str) -> Result<(), WingError> {
         self.wing
             .set_string(self.get_dca_property("name").unwrap(), new_name)?;
         Ok(())
     }
 
-    pub fn set_color(&mut self, color: WingColor) -> Result<(), WingError> {
+    pub fn set_color(&self, color: WingColor) -> Result<(), WingError> {
         self.wing
             .set_int(self.get_dca_property("col").unwrap(), color as i32)?;
         Ok(())

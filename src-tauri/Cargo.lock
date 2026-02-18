@@ -2069,6 +2069,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
  "tauri-specta",
+ "tokio",
 ]
 
 [[package]]

@@ -1,10 +1,14 @@
-use crate::{mix::ActorId, wing::error::WingError};
+use crate::{
+    mix::{ActorId, PositionId},
+    wing::error::WingError,
+};
 
 #[derive(Debug)]
 pub enum MixError {
     WingError(WingError),
 
     ActorNotFound(ActorId),
+    PositionNotFound(PositionId),
 }
 
 impl std::fmt::Display for MixError {
@@ -13,6 +17,7 @@ impl std::fmt::Display for MixError {
             Self::WingError(err) => write!(f, "Wing error: {}", err),
 
             Self::ActorNotFound(id) => write!(f, "Actor not found: {}", id),
+            Self::PositionNotFound(id) => write!(f, "Position not found: {}", id),
         }
     }
 }

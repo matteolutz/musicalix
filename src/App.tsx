@@ -37,7 +37,7 @@ const App = () => {
   };
 
   return (
-    <main className="size-full">
+    <main className="size-full flex flex-col">
       <Tabs
         className="w-full"
         value={currentTab?.id}
@@ -51,10 +51,12 @@ const App = () => {
           ))}
         </TabsList>
       </Tabs>
+      <div className="w-full grow">
       <Routes>
         <Route path="/" element={<PerformPage />} />
         <Route path="/actors" element={<ActorsPage />} />
-      </Routes>
+        </Routes>
+      </div>
     </main>
   );
 };

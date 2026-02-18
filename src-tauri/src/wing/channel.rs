@@ -3,7 +3,7 @@ use std::{collections::HashSet, fmt::Debug};
 use itertools::Itertools;
 use libwing::WingConsole;
 
-use crate::wing::{error::WingError, id::WingId, WingColor, WingConsoleExt, WingDcaId};
+use crate::wing::{error::WingError, id::WingId, Wing, WingColor, WingDcaId};
 
 #[derive(serde::Serialize, serde::Deserialize, specta::Type)]
 pub struct WingChannelInfo {
@@ -40,12 +40,12 @@ impl TryFrom<u8> for WingChannelId {
 }
 
 pub struct WingChannel<'a> {
-    wing: &'a mut WingConsole,
+    wing: &'a Wing,
     id: WingChannelId,
 }
 
 impl<'a> WingChannel<'a> {
-    pub fn new(wing: &'a mut WingConsole, id: WingChannelId) -> Self {
+    pub fn new(wing: &'a Wing, id: WingChannelId) -> Self {
         Self { wing, id }
     }
 }
@@ -57,70 +57,80 @@ impl<'a> WingChannel<'a> {
         WingConsole::name_to_id(&name)
     }
 
-    pub fn get_tags(&mut self) -> Result<WingChannelTagList, WingError> {
-        let data = self
+    pub async fn get_tags(&self) -> Result<WingChannelTagList, WingError> {
+        let tags = self
             .wing
-            .request_and_read_data(self.get_channel_property("tags").unwrap())?;
+            .request_string(self.get_channel_property("tags").unwrap())
+            .await?;
 
-        let tags = WingChannelTagList::new(data.get_string().split(",").map(|tag| tag.to_string()));
+        let tags = WingChannelTagList::new(tags.split(",").map(|tag| tag.to_string()));
 
         Ok(tags)
     }
 
-    pub fn set_tags(&mut self, tags: WingChannelTagList) -> Result<(), WingError> {
+    pub fn set_tags(&self, tags: WingChannelTagList) -> Result<(), WingError> {
         let data = tags.tags().into_iter().join(",");
         self.wing
             .set_string(self.get_channel_property("tags").unwrap(), &data)?;
         Ok(())
     }
 
-    pub fn assign_to_dca(&mut self, dca_id: WingDcaId) -> Result<(), WingError> {
-        let mut tags = self.get_tags()?;
+    pub async fn assign_to_dca(&self, dca_id: WingDcaId) -> Result<(), WingError> {
+        let mut tags = self.get_tags().await?;
         tags.add_dca(dca_id);
         self.set_tags(tags)?;
         Ok(())
     }
 
-    pub fn unassign_from_dca(&mut self, dca_id: WingDcaId) -> Result<(), WingError> {
-        let mut tags = self.get_tags()?;
+    pub async fn unassign_from_dca(&self, dca_id: WingDcaId) -> Result<(), WingError> {
+        let mut tags = self.get_tags().await?;
         tags.remove_dca(dca_id);
         self.set_tags(tags)?;
         Ok(())
     }
 
-    pub fn set_dcas(&mut self, dcas: impl IntoIterator<Item = WingDcaId>) -> Result<(), WingError> {
-        let mut tags = self.get_tags()?;
+    pub async fn set_dcas(
+        &self,
+        dcas: impl IntoIterator<Item = WingDcaId>,
+    ) -> Result<(), WingError> {
+        let mut tags = self.get_tags().await?;
         tags.set_dcas(dcas);
         self.set_tags(tags)?;
         Ok(())
     }
 
-    pub fn mute(&mut self) -> Result<(), WingError> {
-        todo!()
+    pub fn mute(&self) -> Result<(), WingError> {
+        todo!("wing channel mute")
     }
 
-    pub fn unmute(&mut self) -> Result<(), WingError> {
-        todo!()
+    pub fn unmute(&self) -> Result<(), WingError> {
+        todo!("wing channel unmute")
     }
 
-    pub fn get_name(&mut self) -> Result<String, WingError> {
-        let data = self
+    pub fn set_pan(&self, pan: f32) -> Result<(), WingError> {
+        todo!("wing channel set_pan")
+    }
+
+    pub async fn get_name(&self) -> Result<String, WingError> {
+        let name = self
             .wing
-            .request_and_read_data(self.get_channel_property("name").unwrap())?;
-        Ok(data.get_string())
+            .request_string(self.get_channel_property("name").unwrap())
+            .await?;
+        Ok(name)
     }
 
-    pub fn get_color(&mut self) -> Result<WingColor, WingError> {
-        let data = self
+    pub async fn get_color(&self) -> Result<WingColor, WingError> {
+        let int_data = self
             .wing
-            .request_and_read_data(self.get_channel_property("color").unwrap())?;
-        let int_data = data.get_int() as u8;
+            .request_int(self.get_channel_property("color").unwrap())
+            .await? as u8;
+
         Ok(int_data.try_into().unwrap())
     }
 
-    pub fn get_info(&mut self) -> Result<WingChannelInfo, WingError> {
-        let name = self.get_name()?;
-        let color = self.get_color()?;
+    pub async fn get_info(&self) -> Result<WingChannelInfo, WingError> {
+        let name = self.get_name().await?;
+        let color = self.get_color().await?;
         Ok(WingChannelInfo { name, color })
     }
 }

@@ -4,46 +4,52 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tauri_specta::Event;
 
-use crate::{cue::Cue, mix::MixConfig, AppData, MutableState};
+use crate::{
+    cue::{Cue, CueId, CueList},
+    mix::MixConfig,
+    AppData, MutableState,
+};
+
+#[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ShowState {
+    pub current_cue_id: Option<CueId>,
+}
+
+impl ShowState {
+    pub fn reset(&mut self, handle: &AppHandle) {
+        *self = Self::default();
+        let _ = ShowStateEvent::Update(self.clone()).emit(handle);
+    }
+}
+
+#[derive(Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+pub enum ShowStateEvent {
+    Update(ShowState),
+}
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Show {
     pub mix_config: MixConfig,
-    pub cues: Vec<Cue>,
+    pub cues: CueList,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
 pub enum ShowEvent {
     Loaded(Show),
+    CueAdded((u32, Cue)),
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn open_showfile(
-    handle: AppHandle,
-    state: MutableState<'_, AppData>,
-    file_path: String,
-) -> Result<(), String> {
-    let show_file = File::open(file_path).map_err(|err| format!("Failed to open file: {}", err))?;
-    let show: Show = serde_json::from_reader(&show_file)
-        .map_err(|err| format!("Failed to parse show file: {}", err))?;
+pub async fn get_show(state: MutableState<'_, AppData>) -> Result<(Show, ShowState), String> {
+    let (show, state) = {
+        let state = state.read().await;
+        (state.show.clone(), state.show_state.clone())
+    };
 
-    {
-        let mut app_state = state.write().await;
-        app_state.show = show.clone();
-    }
-
-    let _ = ShowEvent::Loaded(show).emit(&handle);
-
-    Ok(())
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn get_show(state: MutableState<'_, AppData>) -> Result<Show, String> {
-    let show = state.read().await.show.clone();
-    Ok(show)
+    Ok((show, state))
 }
 
 pub async fn save_show_as(handle: AppHandle) -> Result<(), String> {
@@ -149,10 +155,37 @@ pub async fn open_show(handle: AppHandle) -> Result<(), String> {
         .unwrap()
         .set_title(open_file_path.display().to_string().as_str());
     app_data.current_show_file_path = Some(open_file_path);
+    app_data.show_state.reset(&handle);
 
     let _ = ShowEvent::Loaded(show)
         .emit(&handle)
         .inspect_err(|err| println!("Failed to send showfile load event: {}", err));
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn add_cue(handle: AppHandle, state: MutableState<'_, AppData>) -> Result<(), String> {
+    let max_cue_id = {
+        let app_data = state.read().await;
+        app_data.show.cues.iter().map(|cue| cue.id).max()
+    };
+
+    let cue_id = max_cue_id
+        .map(|id| id.next())
+        .unwrap_or_else(|| CueId::new(1, 0));
+
+    let name = format!("Cue {}", cue_id);
+
+    let cue = Cue::new(cue_id, name);
+
+    let cue_idx = {
+        let mut app_data = state.write().await;
+        app_data.show.cues.push(cue.clone())
+    };
+
+    let _ = ShowEvent::CueAdded((cue_idx as u32, cue)).emit(&handle);
 
     Ok(())
 }

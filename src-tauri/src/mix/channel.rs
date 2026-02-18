@@ -1,5 +1,5 @@
 use crate::{
-    wing::{WingChannelId, WingChannelInfo, WingConsoleExt},
+    wing::{WingChannelId, WingChannelInfo},
     AppData, MutableState,
 };
 
@@ -18,8 +18,9 @@ pub async fn get_wing_channel_info(
         .try_into()
         .map_err(|err| format!("Invalid channel ID: {}", err))?;
 
-    let mut channel = wing.channel(channel_id);
+    let channel = wing.channel(channel_id);
     channel
         .get_info()
+        .await
         .map_err(|err| format!("Failed to get channel info: {}", err))
 }
