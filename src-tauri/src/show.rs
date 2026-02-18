@@ -5,7 +5,7 @@ use tauri_plugin_dialog::DialogExt;
 use tauri_specta::Event;
 
 use crate::{
-    cue::{Cue, CueId, CueList},
+    cue::{Cue, CueExecutionContext, CueId, CueList},
     mix::MixConfig,
     AppData, MutableState,
 };
@@ -17,8 +17,13 @@ pub struct ShowState {
 }
 
 impl ShowState {
-    pub fn reset(&mut self, handle: &AppHandle) {
+    fn reset(&mut self, handle: &AppHandle) {
         *self = Self::default();
+        let _ = ShowStateEvent::Update(self.clone()).emit(handle);
+    }
+
+    fn update_current_cue(&mut self, cue_id: Option<CueId>, handle: &AppHandle) {
+        self.current_cue_id = cue_id;
         let _ = ShowStateEvent::Update(self.clone()).emit(handle);
     }
 }
@@ -26,6 +31,37 @@ impl ShowState {
 #[derive(Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
 pub enum ShowStateEvent {
     Update(ShowState),
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn goto_cue(
+    handle: AppHandle,
+    state: MutableState<'_, AppData>,
+    cue_id: CueId,
+) -> Result<(), String> {
+    let mut app_data = state.write().await;
+
+    let Some(console) = app_data.console.as_ref() else {
+        return Err("Console not connected".to_string());
+    };
+
+    let Some(cue) = app_data.show.cues.get(&cue_id) else {
+        return Err("Cue not found".to_string());
+    };
+
+    cue.activate(CueExecutionContext {
+        config: &app_data.show.mix_config,
+        wing: console,
+    })
+    .await
+    .map_err(|err| format!("Failed to activate cue: {}", err))?;
+
+    app_data
+        .show_state
+        .update_current_cue(Some(cue_id), &handle);
+
+    Ok(())
 }
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]

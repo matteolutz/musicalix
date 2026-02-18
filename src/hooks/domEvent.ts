@@ -1,10 +1,10 @@
-import { useEffect, useEffectEvent } from 'react';
+import { DependencyList, useEffect, useEffectEvent } from "react";
 
 // I only use the 3 types most of the time, so...
 type DOMEventMapDefinitions = [
   [HTMLElement, HTMLElementEventMap],
   [Window, WindowEventMap],
-  [Document, DocumentEventMap]
+  [Document, DocumentEventMap],
 ];
 
 type DOMEventSubscriber = DOMEventMapDefinitions[number][0];
@@ -22,26 +22,22 @@ type GetEventMapFromByElement<T extends DOMEventSubscriber> =
 const useEventListener = <
   TElement extends DOMEventSubscriber,
   TType extends keyof GetEventMapFromByElement<TElement>,
-  TEvent extends GetEventMapFromByElement<TElement>[TType]
+  TEvent extends GetEventMapFromByElement<TElement>[TType],
 >(
   element: TElement,
   eventType: TType,
-  listener: (event: TEvent) => unknown
+  listener: (event: TEvent) => unknown,
+  deps: DependencyList = [],
 ) => {
-  const eventHandler = useEffectEvent((event: TEvent) => listener(event));
-
   useEffect(() => {
-    element.addEventListener(
-      eventType as string,
-      eventHandler as EventListener
-    );
+    element.addEventListener(eventType as string, listener as EventListener);
     return () => {
       element.removeEventListener(
         eventType as string,
-        eventHandler as EventListener
+        listener as EventListener,
       );
     };
-  }, [eventType, element]);
+  }, [eventType, element, listener, ...deps]);
 };
 
 export default useEventListener;

@@ -10,8 +10,8 @@ use tauri::{
 use crate::{
     mix::{add_actor, get_wing_channel_info, ActorEvent},
     show::{
-        add_cue, get_show, open_show, save_show, save_show_as, Show, ShowEvent, ShowState,
-        ShowStateEvent,
+        add_cue, get_show, goto_cue, open_show, save_show, save_show_as, Show, ShowEvent,
+        ShowState, ShowStateEvent,
     },
     wing::Wing,
 };
@@ -68,7 +68,8 @@ pub fn run() {
             get_show,
             get_wing_channel_info,
             add_actor,
-            add_cue
+            add_cue,
+            goto_cue
         ])
         .events(tauri_specta::collect_events![
             ShowEvent,

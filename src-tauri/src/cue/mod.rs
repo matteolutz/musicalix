@@ -15,8 +15,8 @@ pub use list::*;
 
 #[derive(Clone)]
 pub struct CueExecutionContext<'a> {
-    config: &'a MixConfig,
-    wing: &'a Wing,
+    pub config: &'a MixConfig,
+    pub wing: &'a Wing,
 }
 
 #[derive(
@@ -74,7 +74,7 @@ impl Cue {
         }
     }
 
-    pub async fn activate<'a>(&self, context: &CueExecutionContext<'a>) -> Result<(), MixError> {
+    pub async fn activate<'a>(&self, context: CueExecutionContext<'a>) -> Result<(), MixError> {
         if self.fade_time > 0.0 {
             // TODO: in fade
         }

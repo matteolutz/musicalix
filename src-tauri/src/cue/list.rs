@@ -1,4 +1,4 @@
-use crate::cue::Cue;
+use crate::cue::{Cue, CueId};
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(transparent)]
@@ -23,5 +23,13 @@ impl CueList {
 
     pub fn iter(&self) -> impl Iterator<Item = &Cue> {
         self.0.iter()
+    }
+
+    pub fn has(&self, cue_id: &CueId) -> bool {
+        self.0.iter().any(|c| &c.id == cue_id)
+    }
+
+    pub fn get(&self, cue_id: &CueId) -> Option<&Cue> {
+        self.0.iter().find(|cue| &cue.id == cue_id)
     }
 }

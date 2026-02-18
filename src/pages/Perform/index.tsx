@@ -28,33 +28,42 @@ const PerformPage = () => {
 
   const [selectedCue, setSelectedCue] = useState<number | null>(null);
 
-  useEventListener(window, "keydown", (e) => {
-    switch (e.key) {
-      case "ArrowDown": {
-        e.preventDefault();
+  useEventListener(
+    window,
+    "keydown",
+    (e) => {
+      switch (e.key) {
+        case "ArrowDown": {
+          e.preventDefault();
 
-        const newSelected =
-          selectedCue === null ? 0 : mod(selectedCue + 1, cues.length);
-        setSelectedCue(newSelected);
-        break;
-      }
-      case "ArrowUp": {
-        e.preventDefault();
+          const newSelected =
+            selectedCue === null ? 0 : mod(selectedCue + 1, cues.length);
+          setSelectedCue(newSelected);
+          break;
+        }
+        case "ArrowUp": {
+          e.preventDefault();
 
-        const newSelected =
-          selectedCue === null ? 0 : mod(selectedCue - 1, cues.length);
-        setSelectedCue(newSelected);
-        break;
+          const newSelected =
+            selectedCue === null ? 0 : mod(selectedCue - 1, cues.length);
+          setSelectedCue(newSelected);
+          break;
+        }
+        case " ": {
+          if (selectedCue === null) break;
+          const cueId = cues[selectedCue].id;
+          commands
+            .gotoCue(cueId)
+            .then((res) => console.log("gotoCue result:", res));
+          break;
+        }
+        default:
+          console.log("hit key", e.key);
+          break;
       }
-      case " ": {
-        console.log("next cue");
-        break;
-      }
-      default:
-        console.log("hit key", e.key);
-        break;
-    }
-  });
+    },
+    [selectedCue],
+  );
 
   const addCue = async () => {
     console.log("adding show");
@@ -68,7 +77,7 @@ const PerformPage = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Cue Id</TableHead>
-              <TableHead className="w-[100px]">Cue Name</TableHead>
+              <TableHead className="w-25">Cue Name</TableHead>
 
               {[...Array(NUM_DCAS).keys()].map((dca) => (
                 <TableHead>DCA {dca}</TableHead>
