@@ -8,7 +8,7 @@ use tauri::{
 };
 
 use crate::{
-    mix::{add_actor, get_wing_channel_info, ActorEvent},
+    mix::{add_actor, add_group, get_wing_channel_info, import_actors, ActorEvent, GroupEvent},
     show::{
         add_cue, get_show, goto_cue, open_show, save_show, save_show_as, Show, ShowEvent,
         ShowState, ShowStateEvent,
@@ -68,6 +68,8 @@ pub fn run() {
             get_show,
             get_wing_channel_info,
             add_actor,
+            import_actors,
+            add_group,
             add_cue,
             goto_cue
         ])
@@ -75,6 +77,7 @@ pub fn run() {
             ShowEvent,
             ShowStateEvent,
             ActorEvent,
+            GroupEvent
         ]);
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

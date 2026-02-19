@@ -12,9 +12,24 @@ pub struct WingChannelInfo {
 }
 
 #[derive(
-    Copy, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, specta::Type,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    serde::Serialize,
+    serde::Deserialize,
+    specta::Type,
 )]
 pub struct WingChannelId(u8);
+
+impl std::fmt::Display for WingChannelId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl WingId for WingChannelId {
     type Id = u8;

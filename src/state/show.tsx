@@ -97,6 +97,25 @@ export const ShowProvider: FC<PropsWithChildren> = ({ children }) => {
     [show],
   );
 
+  useKeyedEnumTauriEventHandler(
+    "groupEvent",
+    {
+      Added: ([id, actor]) => {
+        if (show === null) return;
+
+        show.mixConfig.groups[id] = actor;
+        setShow({ ...show });
+      },
+      Removed: (id) => {
+        if (show === null) return;
+
+        delete show.mixConfig.groups[id];
+        setShow({ ...show });
+      },
+    },
+    [show],
+  );
+
   if (!show || !showState) {
     return <div>Loading...</div>;
   }

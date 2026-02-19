@@ -1,5 +1,5 @@
 use crate::{
-    mix::{ActorId, PositionId},
+    mix::{ActorId, GroupId, PositionId},
     wing::error::WingError,
 };
 
@@ -8,6 +8,7 @@ pub enum MixError {
     WingError(WingError),
 
     ActorNotFound(ActorId),
+    GroupNotFound(GroupId),
     PositionNotFound(PositionId),
 }
 
@@ -17,6 +18,7 @@ impl std::fmt::Display for MixError {
             Self::WingError(err) => write!(f, "Wing error: {}", err),
 
             Self::ActorNotFound(id) => write!(f, "Actor not found: {}", id),
+            Self::GroupNotFound(id) => write!(f, "Group not found: {}", id),
             Self::PositionNotFound(id) => write!(f, "Position not found: {}", id),
         }
     }

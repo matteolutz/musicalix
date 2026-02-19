@@ -1,5 +1,20 @@
 import { WingColor } from "@/bindings";
 
+export const ALL_WING_COLORS = [
+  "GrayBlue",
+  "MediumBlue",
+  "DarkBlue",
+  "Turquoise",
+  "Green",
+  "OliveGreen",
+  "Yellow",
+  "Orange",
+  "Red",
+  "Coral",
+  "Pink",
+  "Mauve",
+] as const;
+
 export const getWingColor = (wingColor: WingColor): string => {
   switch (wingColor) {
     case "GrayBlue":

@@ -2,6 +2,7 @@ import { Route, Routes, useLocation, useNavigate } from "react-router";
 import PerformPage from "./pages/Perform";
 import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
 import ActorsPage from "./pages/Actors";
+import GroupsPage from "./pages/Groups";
 
 type Tab = {
   title: string;
@@ -19,6 +20,11 @@ const tabs: Tab[] = [
     title: "Actors",
     id: "actors",
     href: "/actors",
+  },
+  {
+    title: "Groups",
+    id: "groups",
+    href: "/groups",
   },
 ];
 
@@ -52,9 +58,10 @@ const App = () => {
         </TabsList>
       </Tabs>
       <div className="w-full grow">
-      <Routes>
-        <Route path="/" element={<PerformPage />} />
-        <Route path="/actors" element={<ActorsPage />} />
+        <Routes>
+          <Route path="/" element={<PerformPage />} />
+          <Route path="/actors" element={<ActorsPage />} />
+          <Route path="/groups" element={<GroupsPage />} />
         </Routes>
       </div>
     </main>

@@ -29,6 +29,22 @@ async addActor(channel: WingChannelId, name: string, color: WingColor | null) : 
     else return { status: "error", error: e  as any };
 }
 },
+async importActors(fromChannel: WingChannelId, toChannel: WingChannelId) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("import_actors", { fromChannel, toChannel }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async addGroup(actors: ActorId[], name: string, color: WingColor | null) : Promise<Result<GroupId, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("add_group", { actors, name, color }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async addCue() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("add_cue") };
@@ -52,10 +68,12 @@ async gotoCue(cueId: CueId) : Promise<Result<null, string>> {
 
 export const events = __makeEvents__<{
 actorEvent: ActorEvent,
+groupEvent: GroupEvent,
 showEvent: ShowEvent,
 showStateEvent: ShowStateEvent
 }>({
 actorEvent: "actor-event",
+groupEvent: "group-event",
 showEvent: "show-event",
 showStateEvent: "show-state-event"
 })
@@ -87,8 +105,11 @@ fadeTime: number;
 snap: ClampedValue; dca: DcaAssignment; position: PositionAssignment }
 export type CueId = { major: number; minor: number }
 export type CueList = Cue[]
-export type DcaAssignment = { assignment: [(ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null), (ActorId | null)] }
-export type MixConfig = { actors: Partial<{ [key in ActorId]: Actor }>; positions: Partial<{ [key in PositionId]: Position }> }
+export type DcaAssignment = { assignment: [SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment, SingleDcaAssignment] }
+export type Group = { name: string; actors: ActorId[]; color: WingColor | null }
+export type GroupEvent = { Added: [GroupId, Group] } | { Removed: GroupId }
+export type GroupId = number
+export type MixConfig = { actors: Partial<{ [key in ActorId]: Actor }>; groups: Partial<{ [key in GroupId]: Group }>; positions: Partial<{ [key in PositionId]: Position }> }
 export type Position = { 
 /**
  * Panning. 0.0 = left, 0.5 = center, 1.0 = right
@@ -100,6 +121,7 @@ export type Show = { mixConfig: MixConfig; cues: CueList }
 export type ShowEvent = { Loaded: Show } | { CueAdded: [number, Cue] }
 export type ShowState = { currentCueId: CueId | null }
 export type ShowStateEvent = { Update: ShowState }
+export type SingleDcaAssignment = "None" | { Actor: ActorId } | { Group: GroupId }
 export type WingChannelId = number
 export type WingChannelInfo = { name: string; color: WingColor }
 export type WingColor = "GrayBlue" | "MediumBlue" | "DarkBlue" | "Turquoise" | "Green" | "OliveGreen" | "Yellow" | "Orange" | "Red" | "Coral" | "Pink" | "Mauve"
