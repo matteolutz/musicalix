@@ -3,6 +3,7 @@ import PerformPage from "./pages/Perform";
 import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
 import ActorsPage from "./pages/Actors";
 import GroupsPage from "./pages/Groups";
+import ConfirmationModalContextProvider from "./hooks/modal";
 
 type Tab = {
   title: string;
@@ -43,27 +44,29 @@ const App = () => {
   };
 
   return (
-    <main className="size-full flex flex-col">
-      <Tabs
-        className="w-full"
-        value={currentTab?.id}
-        onValueChange={handleTabValueChange}
-      >
-        <TabsList className="w-full">
-          {tabs.map((tab) => (
-            <TabsTrigger value={tab.id} key={tab.id}>
-              {tab.title}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <div className="w-full grow">
-        <Routes>
-          <Route path="/" element={<PerformPage />} />
-          <Route path="/actors" element={<ActorsPage />} />
-          <Route path="/groups" element={<GroupsPage />} />
-        </Routes>
-      </div>
+    <main className="size-full flex flex-col select-none">
+      <ConfirmationModalContextProvider>
+        <Tabs
+          className="w-full"
+          value={currentTab?.id}
+          onValueChange={handleTabValueChange}
+        >
+          <TabsList className="w-full">
+            {tabs.map((tab) => (
+              <TabsTrigger value={tab.id} key={tab.id}>
+                {tab.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <div className="w-full grow">
+          <Routes>
+            <Route path="/" element={<PerformPage />} />
+            <Route path="/actors" element={<ActorsPage />} />
+            <Route path="/groups" element={<GroupsPage />} />
+          </Routes>
+        </div>
+      </ConfirmationModalContextProvider>
     </main>
   );
 };

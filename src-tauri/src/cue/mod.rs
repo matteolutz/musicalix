@@ -89,4 +89,22 @@ impl Cue {
         self.position.apply(context)?;
         Ok(())
     }
+
+    pub fn rename(&mut self, name: String) {
+        self.name = name;
+    }
+
+    pub fn set_assignment(
+        &mut self,
+        dca_index: u8,
+        assignment: SingleDcaAssignment,
+    ) -> Result<(), MixError> {
+        let current_assignment = self
+            .dca
+            .assignment
+            .get_mut(dca_index as usize)
+            .ok_or_else(|| MixError::DcaIndexOutOfRange(dca_index))?;
+        *current_assignment = assignment;
+        Ok(())
+    }
 }

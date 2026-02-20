@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::cue::{Cue, CueId};
 
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -31,5 +33,14 @@ impl CueList {
 
     pub fn get(&self, cue_id: &CueId) -> Option<&Cue> {
         self.0.iter().find(|cue| &cue.id == cue_id)
+    }
+
+    pub fn get_mut(&mut self, cue_id: &CueId) -> Option<&mut Cue> {
+        self.0.iter_mut().find(|cue| &cue.id == cue_id)
+    }
+
+    pub fn remove(&mut self, cue_id: &CueId) -> Option<Cue> {
+        let (idx, _) = self.0.iter().find_position(|c| &c.id == cue_id)?;
+        Some(self.0.remove(idx))
     }
 }

@@ -53,6 +53,30 @@ async addCue() : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async deleteCue(cueId: CueId) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_cue", { cueId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async renameCue(cueId: CueId, name: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("rename_cue", { cueId, name }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setCueDcaAssignment(cueId: CueId, dcaIdx: number, assignment: SingleDcaAssignment) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_cue_dca_assignment", { cueId, dcaIdx, assignment }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async gotoCue(cueId: CueId) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("goto_cue", { cueId }) };
@@ -118,7 +142,7 @@ pan: ClampedValue }
 export type PositionAssignment = { assignment: Partial<{ [key in ActorId]: PositionId }> }
 export type PositionId = number
 export type Show = { mixConfig: MixConfig; cues: CueList }
-export type ShowEvent = { Loaded: Show } | { CueAdded: [number, Cue] }
+export type ShowEvent = { Loaded: Show } | { CueAdded: [number, Cue] } | { CueUpdated: Cue } | { CueDeleted: CueId }
 export type ShowState = { currentCueId: CueId | null }
 export type ShowStateEvent = { Update: ShowState }
 export type SingleDcaAssignment = "None" | { Actor: ActorId } | { Group: GroupId }

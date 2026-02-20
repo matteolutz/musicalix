@@ -1,7 +1,4 @@
-use crate::{
-    utils::ClampedValue,
-    wing::{error::WingError, WingChannel},
-};
+use crate::{mix::error::MixError, utils::ClampedValue, wing::WingChannel};
 
 #[repr(transparent)]
 #[derive(
@@ -52,7 +49,7 @@ impl Default for Position {
 }
 
 impl Position {
-    pub fn apply(&self, channel: &WingChannel) -> Result<(), WingError> {
+    pub fn apply(&self, channel: &WingChannel) -> Result<(), MixError> {
         channel.set_pan(self.pan.as_f32())?;
         Ok(())
     }

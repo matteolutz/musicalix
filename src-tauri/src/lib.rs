@@ -10,8 +10,8 @@ use tauri::{
 use crate::{
     mix::{add_actor, add_group, get_wing_channel_info, import_actors, ActorEvent, GroupEvent},
     show::{
-        add_cue, get_show, goto_cue, open_show, save_show, save_show_as, Show, ShowEvent,
-        ShowState, ShowStateEvent,
+        add_cue, delete_cue, get_show, goto_cue, new_show, open_show, rename_cue, save_show,
+        save_show_as, set_cue_dca_assignment, Show, ShowEvent, ShowState, ShowStateEvent,
     },
     wing::Wing,
 };
@@ -71,6 +71,9 @@ pub fn run() {
             import_actors,
             add_group,
             add_cue,
+            delete_cue,
+            rename_cue,
+            set_cue_dca_assignment,
             goto_cue
         ])
         .events(tauri_specta::collect_events![
@@ -104,6 +107,8 @@ pub fn run() {
             app.manage(Arc::new(RwLock::new(app_data)));
 
             let file_menu = SubmenuBuilder::new(app, "File")
+                .text("new", "New")
+                .separator()
                 .text("save", "Save")
                 .text("save-as", "Save As")
                 .text("open", "Open")
@@ -115,6 +120,14 @@ pub fn run() {
             app.set_menu(menu.clone())?;
 
             app.on_menu_event(|handle, event| match event.id().0.as_str() {
+                "new" => {
+                    let handle = handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let _ = new_show(handle)
+                            .await
+                            .inspect_err(|err| println!("Failed to load new show: {}", err));
+                    });
+                }
                 "save" => {
                     let handle = handle.clone();
                     tauri::async_runtime::spawn(async move {

@@ -61,7 +61,7 @@ impl SingleDcaAssignment {
 #[derive(Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DcaAssignment {
-    assignment: [SingleDcaAssignment; 16],
+    pub(super) assignment: [SingleDcaAssignment; 16],
 }
 
 impl DcaAssignment {

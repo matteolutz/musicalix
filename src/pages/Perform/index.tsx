@@ -8,12 +8,14 @@ import {
 } from "@/components/ui/table";
 import { useShow, useShowState } from "@/state/show";
 import CueRenderer from "./CueRenderer";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useEventListener from "@/hooks/domEvent";
 import { mod } from "@/utils/math";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { commands } from "@/bindings";
+import { Switch } from "@/components/ui/switch";
+import { useConfirmationModalContext } from "@/hooks/modal";
 
 const NUM_DCAS = 16;
 
@@ -26,7 +28,29 @@ const PerformPage = () => {
     (cue) => cue.id === showState.currentCueId,
   );
 
-  const [selectedCue, setSelectedCue] = useState<number | null>(null);
+  const [isPerforming, setIsPerforming] = useState<boolean>(false);
+  const [selectedCueIdx, setSelectedCueIdx] = useState<number | null>(null);
+  const selectedCue = selectedCueIdx !== null ? cues[selectedCueIdx] : null;
+
+  const cm = useConfirmationModalContext();
+
+  useEffect(() => {
+    if (!isPerforming) {
+      // reset selected cue when arming performance mode
+      setSelectedCueIdx(cues.length > 0 ? 0 : null);
+    } else {
+      setSelectedCueIdx(null);
+    }
+  }, [cues, isPerforming]);
+
+  const addToCue = useCallback(
+    (add: number) => {
+      const newSelected =
+        selectedCueIdx === null ? 0 : mod(selectedCueIdx + add, cues.length);
+      setSelectedCueIdx(newSelected);
+    },
+    [selectedCueIdx],
+  );
 
   useEventListener(
     window,
@@ -36,25 +60,24 @@ const PerformPage = () => {
         case "ArrowDown": {
           e.preventDefault();
 
-          const newSelected =
-            selectedCue === null ? 0 : mod(selectedCue + 1, cues.length);
-          setSelectedCue(newSelected);
+          addToCue(1);
           break;
         }
         case "ArrowUp": {
           e.preventDefault();
 
-          const newSelected =
-            selectedCue === null ? 0 : mod(selectedCue - 1, cues.length);
-          setSelectedCue(newSelected);
+          addToCue(-1);
           break;
         }
         case " ": {
-          if (selectedCue === null) break;
-          const cueId = cues[selectedCue].id;
-          commands
-            .gotoCue(cueId)
-            .then((res) => console.log("gotoCue result:", res));
+          if (!isPerforming || selectedCueIdx === null) break;
+
+          const cueId = cues[selectedCueIdx].id;
+          commands.gotoCue(cueId).then((res) => {
+            if (res.status === "ok") {
+              addToCue(1);
+            }
+          });
           break;
         }
         default:
@@ -62,7 +85,7 @@ const PerformPage = () => {
           break;
       }
     },
-    [selectedCue],
+    [selectedCueIdx],
   );
 
   const addCue = async () => {
@@ -70,12 +93,35 @@ const PerformPage = () => {
     await commands.addCue();
   };
 
+  const onPerformingChanged = (isPerforming: boolean) => {
+    if (isPerforming) {
+      setIsPerforming(true);
+      return;
+    }
+
+    cm.showConfirmation({
+      title: "Disarm performance mode",
+      message: "Do you really want to disarm the performance mode?",
+      confirmButtonText: "Disarm",
+    }).then((res) => {
+      if (res) {
+        setIsPerforming(false);
+      }
+    });
+  };
+
   return (
     <div className="size-full overflow-hidden flex flex-col p-2 gap-4">
+      <div className="w-full p-2 gap-2 h-10 flex items-center border">
+        <p className="text-sm">Arm perform</p>
+        <Switch checked={isPerforming} onCheckedChange={onPerformingChanged} />
+      </div>
+
       <div className="w-full overflow-auto grow border *:size-full">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead />
               <TableHead>Cue Id</TableHead>
               <TableHead className="w-25">Cue Name</TableHead>
 
@@ -88,9 +134,10 @@ const PerformPage = () => {
             {cues.map((cue, index) => (
               <CueRenderer
                 cue={cue}
-                isCurrent={index === currentCueIdx}
-                isSelected={index === selectedCue}
-                onSelect={() => setSelectedCue(index)}
+                isCurrent={isPerforming && index === currentCueIdx}
+                isSelected={isPerforming && index === selectedCueIdx}
+                allowEditing={!isPerforming}
+                onSelect={() => setSelectedCueIdx(index)}
               />
             ))}
 
@@ -105,7 +152,9 @@ const PerformPage = () => {
         </Table>
       </div>
 
-      <div className="w-full h-20 items-end border">Hello</div>
+      <div className="w-full h-20 items-end border">
+        {isPerforming && selectedCue && selectedCue.name}
+      </div>
     </div>
   );
 };

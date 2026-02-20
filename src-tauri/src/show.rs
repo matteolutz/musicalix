@@ -5,7 +5,7 @@ use tauri_plugin_dialog::DialogExt;
 use tauri_specta::Event;
 
 use crate::{
-    cue::{Cue, CueExecutionContext, CueId, CueList},
+    cue::{Cue, CueExecutionContext, CueId, CueList, SingleDcaAssignment},
     mix::MixConfig,
     AppData, MutableState,
 };
@@ -75,6 +75,8 @@ pub struct Show {
 pub enum ShowEvent {
     Loaded(Show),
     CueAdded((u32, Cue)),
+    CueUpdated(Cue),
+    CueDeleted(CueId),
 }
 
 #[tauri::command]
@@ -159,6 +161,26 @@ pub async fn save_show(handle: AppHandle) -> Result<(), String> {
         .map_err(|err| format!("Fialed to write showfile: {}", err));
 }
 
+pub async fn new_show(handle: AppHandle) -> Result<(), String> {
+    let show = Show::default();
+
+    let app_data: MutableState<'_, AppData> = handle.state();
+    let mut app_data = app_data.write().await;
+    app_data.show = show.clone();
+    let _ = handle
+        .get_webview_window("main")
+        .unwrap()
+        .set_title("musicalix");
+    app_data.current_show_file_path = None;
+    app_data.show_state.reset(&handle);
+
+    let _ = ShowEvent::Loaded(show)
+        .emit(&handle)
+        .inspect_err(|err| println!("Failed to send showfile load event: {}", err));
+
+    Ok(())
+}
+
 pub async fn open_show(handle: AppHandle) -> Result<(), String> {
     let open_file_path = tauri::async_runtime::spawn_blocking({
         let handle = handle.clone();
@@ -222,6 +244,68 @@ pub async fn add_cue(handle: AppHandle, state: MutableState<'_, AppData>) -> Res
     };
 
     let _ = ShowEvent::CueAdded((cue_idx as u32, cue)).emit(&handle);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_cue_dca_assignment(
+    handle: AppHandle,
+    state: MutableState<'_, AppData>,
+    cue_id: CueId,
+    dca_idx: u8,
+    assignment: SingleDcaAssignment,
+) -> Result<(), String> {
+    let mut app_state = state.write().await;
+
+    let Some(cue) = app_state.show.cues.get_mut(&cue_id) else {
+        return Err("Cue not found".to_string());
+    };
+
+    cue.set_assignment(dca_idx, assignment)
+        .map_err(|err| format!("Failed to set DCA idx: {}", err))?;
+
+    let _ = ShowEvent::CueUpdated(cue.clone()).emit(&handle);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn rename_cue(
+    handle: AppHandle,
+    state: MutableState<'_, AppData>,
+    cue_id: CueId,
+    name: String,
+) -> Result<(), String> {
+    let mut app_state = state.write().await;
+
+    let Some(cue) = app_state.show.cues.get_mut(&cue_id) else {
+        return Err("Cue not found".to_string());
+    };
+
+    cue.rename(name);
+
+    let _ = ShowEvent::CueUpdated(cue.clone()).emit(&handle);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_cue(
+    handle: AppHandle,
+    state: MutableState<'_, AppData>,
+    cue_id: CueId,
+) -> Result<(), String> {
+    let mut app_state = state.write().await;
+
+    let Some(_) = app_state.show.cues.remove(&cue_id) else {
+        return Err("Cue not found".to_string());
+    };
+
+    let _ = ShowEvent::CueDeleted(cue_id).emit(&handle);
 
     Ok(())
 }

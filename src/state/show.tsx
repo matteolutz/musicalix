@@ -68,6 +68,20 @@ export const ShowProvider: FC<PropsWithChildren> = ({ children }) => {
         show.cues.splice(idx, 0, cue);
         setShow({ ...show });
       },
+      CueUpdated: (cue) => {
+        if (show === null) return;
+
+        const cueIdx = show.cues.findIndex((c) => c.id == cue.id);
+        show.cues[cueIdx] = cue;
+        setShow({ ...show });
+      },
+      CueDeleted: (cueId) => {
+        if (show === null) return;
+
+        const cueIdx = show.cues.findIndex((c) => c.id === cueId);
+        show.cues.splice(cueIdx, 1);
+        setShow({ ...show });
+      },
     },
     [show],
   );

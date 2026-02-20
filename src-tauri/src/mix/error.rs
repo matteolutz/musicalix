@@ -10,6 +10,8 @@ pub enum MixError {
     ActorNotFound(ActorId),
     GroupNotFound(GroupId),
     PositionNotFound(PositionId),
+
+    DcaIndexOutOfRange(u8),
 }
 
 impl std::fmt::Display for MixError {
@@ -20,6 +22,8 @@ impl std::fmt::Display for MixError {
             Self::ActorNotFound(id) => write!(f, "Actor not found: {}", id),
             Self::GroupNotFound(id) => write!(f, "Group not found: {}", id),
             Self::PositionNotFound(id) => write!(f, "Position not found: {}", id),
+
+            Self::DcaIndexOutOfRange(idx) => write!(f, "DCA index {} is out of range", idx),
         }
     }
 }
