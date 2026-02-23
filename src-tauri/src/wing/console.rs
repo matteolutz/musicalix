@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{mpsc, Arc, Mutex},
     thread,
     time::Duration,
 };
@@ -9,6 +9,11 @@ use libwing::{WingConsole, WingNodeData, WingNodeDef, WingResponse};
 use tokio::sync::oneshot;
 
 use crate::wing::{error::WingError, WingChannel, WingChannelId, WingDca, WingDcaId};
+
+pub enum WingRequest {
+    NodeData(i32, oneshot::Sender<Arc<WingNodeData>>),
+    NodeDef(i32, oneshot::Sender<Arc<WingNodeDef>>),
+}
 
 #[derive(Default)]
 pub struct WingRequests {
@@ -56,6 +61,8 @@ impl WingRequests {
 
 #[derive(Clone)]
 pub struct Wing {
+    console_thread_tx: Option<mpsc::Sender<WingRequest>>,
+
     console: Arc<Mutex<WingConsole>>,
     requests: Arc<Mutex<WingRequests>>,
 }
@@ -71,18 +78,71 @@ impl Wing {
 }
 
 impl Wing {
-    pub fn handle_incoming(&self) {
+    fn handle_incoming(&self) {
         let Ok(response) = self.console.lock().unwrap().read() else {
             return;
         };
 
+        if let WingResponse::NodeData(id, data) = &response {
+            match WingConsole::id_to_defs(*id) {
+                None => println!("<Unknown:{}> = {}", id, data.get_string()),
+                Some(defs) if defs.is_empty() => {
+                    println!("<Unknown:{}> = {}", id, data.get_string())
+                }
+                Some(defs) if defs.len() == 1 => {
+                    println!("{} = {}", defs[0].0, data.get_string());
+                }
+                Some(defs) if (defs.len() > 1) => {
+                    let u = std::collections::HashSet::<u16>::from_iter(
+                        defs.iter().map(|(_, def)| def.index),
+                    );
+                    if u.len() == 1 {
+                        // let propname = String::from("/") + &defs[0].0.split("/").enumerate().filter(|(i, _)| *i < defs.len()-1).map(|(_, n)| n).collect::<Vec<_>>().join("/") +
+                        let propname = String::from("prop") + defs[0].1.index.to_string().as_str();
+                        println!("{} = {} (check out propmap.jsonl for more info on property with id {})", propname, data.get_string(), id);
+                    } else {
+                        println!("<MultiProp:{}> = {} (check out propmap.jsonl for more info on property id {})", id, data.get_string(), id);
+                    }
+                }
+                Some(_) => {}
+            }
+        }
+
         self.requests.lock().unwrap().handle(response);
     }
 
-    pub fn handle_incoming_loop(&self) {
+    pub fn make_console_thread_rx(&mut self) -> mpsc::Receiver<WingRequest> {
+        let (tx, rx) = mpsc::channel();
+        self.console_thread_tx = Some(tx);
+        rx
+    }
+
+    pub fn handle_incoming_loop(&self, rx: mpsc::Receiver<WingRequest>) {
         loop {
+            for request in rx.try_iter() {
+                match request {
+                    WingRequest::NodeData(node_id, sender) => {
+                        self.requests
+                            .lock()
+                            .unwrap()
+                            .request_node_data(node_id, sender);
+                        self.console.lock().unwrap().request_node_data(node_id);
+                    }
+                    WingRequest::NodeDef(node_id, sender) => {
+                        self.requests
+                            .lock()
+                            .unwrap()
+                            .request_node_def(node_id, sender);
+                        self.console
+                            .lock()
+                            .unwrap()
+                            .request_node_definition(node_id);
+                    }
+                }
+            }
+
             self.handle_incoming();
-            thread::sleep(Duration::from_secs_f32(1.0 / 60.0));
+            thread::sleep(Duration::from_secs_f32(1.0 / 100.0));
         }
     }
 }
@@ -92,9 +152,13 @@ impl Wing {
     where
         F: FnOnce(&WingNodeData) -> R,
     {
+        let console_tx = self
+            .console_thread_tx
+            .as_ref()
+            .ok_or(WingError::ConsoleTxNotReady)?;
+
         let (tx, rx) = oneshot::channel();
-        self.requests.lock().unwrap().request_node_data(node_id, tx);
-        self.console.lock().unwrap().request_node_data(node_id)?;
+        let _ = console_tx.send(WingRequest::NodeData(node_id, tx));
 
         let res = rx.await.expect("Sender was dropped");
         Ok(f(&res))
@@ -116,12 +180,13 @@ impl Wing {
     where
         F: FnOnce(&WingNodeDef) -> R,
     {
+        let console_tx = self
+            .console_thread_tx
+            .as_ref()
+            .ok_or(WingError::ConsoleTxNotReady)?;
+
         let (tx, rx) = oneshot::channel();
-        self.requests.lock().unwrap().request_node_def(node_id, tx);
-        self.console
-            .lock()
-            .unwrap()
-            .request_node_definition(node_id)?;
+        let _ = console_tx.send(WingRequest::NodeDef(node_id, tx));
 
         let res = rx.await.expect("Sender was dropped");
         Ok(f(&res))
@@ -145,9 +210,20 @@ impl Wing {
 
 impl From<WingConsole> for Wing {
     fn from(value: WingConsole) -> Self {
-        Wing {
+        let mut wing = Wing {
+            console_thread_tx: None,
+
             console: Arc::new(Mutex::new(value)),
             requests: Arc::new(Mutex::new(WingRequests::default())),
-        }
+        };
+
+        let rx = wing.make_console_thread_rx();
+
+        tauri::async_runtime::spawn_blocking({
+            let wing = wing.clone();
+            move || wing.handle_incoming_loop(rx)
+        });
+
+        wing
     }
 }

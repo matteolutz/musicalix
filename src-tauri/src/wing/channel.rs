@@ -115,37 +115,63 @@ impl<'a> WingChannel<'a> {
     }
 
     pub fn mute(&self) -> Result<(), WingError> {
-        todo!("wing channel mute")
+        self.wing
+            .set_int(self.get_channel_property("mute").unwrap(), 1)
     }
 
     pub fn unmute(&self) -> Result<(), WingError> {
-        todo!("wing channel unmute")
+        self.wing
+            .set_int(self.get_channel_property("mute").unwrap(), 0)
     }
 
+    /// Pan is in the range 0.0..=1.0, 0.5 is center
     pub fn set_pan(&self, pan: f32) -> Result<(), WingError> {
-        todo!("wing channel set_pan")
+        // map pan to range -100 to 100
+        let pan = (pan - 0.5) * 200.0;
+        self.wing
+            .set_int(self.get_channel_property("pan").unwrap(), pan as i32)?;
+
+        Ok(())
     }
 
-    pub async fn get_name(&self) -> Result<String, WingError> {
+    pub async fn get_name(&self, source_linked: bool) -> Result<String, WingError> {
         let name = self
             .wing
-            .request_string(self.get_channel_property("name").unwrap())
+            .request_string(
+                self.get_channel_property(if source_linked { "$name" } else { "name" })
+                    .unwrap(),
+            )
             .await?;
         Ok(name)
     }
 
-    pub async fn get_color(&self) -> Result<WingColor, WingError> {
+    pub async fn get_color(&self, source_linked: bool) -> Result<WingColor, WingError> {
         let int_data = self
             .wing
-            .request_int(self.get_channel_property("color").unwrap())
+            .request_int(
+                self.get_channel_property(if source_linked { "$col" } else { "col" })
+                    .unwrap(),
+            )
             .await? as u8;
 
         Ok(int_data.try_into().unwrap())
     }
 
+    pub async fn is_source_linked(&self) -> Result<bool, WingError> {
+        let int_data = self
+            .wing
+            .request_int(self.get_channel_property("clink").unwrap())
+            .await?;
+
+        Ok(int_data != 0)
+    }
+
     pub async fn get_info(&self) -> Result<WingChannelInfo, WingError> {
-        let name = self.get_name().await?;
-        let color = self.get_color().await?;
+        let is_source_linked = self.is_source_linked().await?;
+
+        let name = self.get_name(is_source_linked).await?;
+        let color = self.get_color(is_source_linked).await?;
+
         Ok(WingChannelInfo { name, color })
     }
 }

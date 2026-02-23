@@ -5,6 +5,7 @@ pub enum WingError {
     IdOutOfBounds(u32, RangeInclusive<u32>),
     LibWingError(libwing::Error),
     NodeDataRequestTimeout(i32),
+    ConsoleTxNotReady,
 }
 
 impl WingError {
@@ -29,6 +30,7 @@ impl std::fmt::Display for WingError {
                 write!(f, "Node data request timed out for node ID {}", node_id)
             }
             Self::LibWingError(error) => write!(f, "libwing error: {}", error),
+            Self::ConsoleTxNotReady => write!(f, "Console tx not ready"),
         }
     }
 }

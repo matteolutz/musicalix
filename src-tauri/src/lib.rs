@@ -35,10 +35,13 @@ struct AppData {
 
 impl AppData {
     fn new(allow_unconnected: bool) -> Result<Self, String> {
-        let wing_res = WingConsole::connect(None);
+        let wing_res = WingConsole::connect(Some("192.168.2.193"));
 
         let wing = match wing_res {
-            Ok(wing) => Some(wing),
+            Ok(wing) => {
+                println!("Wing connected");
+                Some(wing)
+            }
             Err(err) => {
                 if allow_unconnected {
                     println!("Failed to connect to Wing Console: {}", err);
@@ -99,10 +102,6 @@ pub fn run() {
             builder.mount_events(app);
 
             let app_data = AppData::new(cfg!(debug_assertions)).unwrap();
-
-            if let Some(wing) = app_data.console.as_ref().cloned() {
-                tauri::async_runtime::spawn_blocking(move || wing.handle_incoming_loop());
-            }
 
             app.manage(Arc::new(RwLock::new(app_data)));
 
